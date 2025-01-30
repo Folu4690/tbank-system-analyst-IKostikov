@@ -1,0 +1,106 @@
+openapi: 3.1.0
+info:
+  title: Client Payment Block API
+  version: 1.0.0
+  description: API для блокировки и разблокировки платежей клиентов в Т-банке. Позволяет блокировать платежи по подозрению на мошенничество или ошибочные реквизиты, а также проверять статус блокировки клиента.
+
+servers:
+  - url: https://api.tbank.com
+
+paths:
+  /clients/{client_id}/block:
+    post:
+      summary: блокировка платежей клиента
+      description: блокирует платежи клиента по причине мошенничества или неверных реквизитов.
+      parameters:
+        - name: client_id
+          in: path
+          required: true
+          description: уникальный идентификатор клиента.
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  enum: [fraud, incorrect_requisites]
+                  description: причина блокировки (fraud — подозрение на мошенничество, incorrect_requisites — неверные реквизиты).
+                comment:
+                  type: string
+                  description: дополнительный комментарий к блокировке.
+                blocked_until:
+                  type: string
+                  format: date-time
+                  description: время до которого блокировка будет активной (опционально).
+      responses:
+        "200":
+          description: платежи клиента успешно заблокированы.
+        "400":
+          description: ошибка в запросе (неверные данные).
+        "500":
+          description: внутренняя ошибка сервера.
+
+  /clients/{client_id}/unblock:
+    post:
+      summary: разблокировка платежей клиента
+      description: разблокирует платежи клиента после разрешения проблемы с реквизитами или подтверждения добросовестности.
+      parameters:
+        - name: client_id
+          in: path
+          required: true
+          description: уникальный идентификатор клиента.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: платежи клиента успешно разблокированы
+        "400":
+          description: ошибка в запросе (неверные данные)
+        "500":
+          description: внутренняя ошибка сервера
+
+  /clients/{client_id}/block-status:
+    get:
+      summary: проверка статуса блокировки клиента.
+      description: проверяет, заблокирован ли клиент, и по какой причине
+      parameters:
+        - name: client_id
+          in: path
+          required: true
+          description: уникальный идентификатор клиента
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: статус блокировки клиента
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  is_blocked:
+                    type: boolean
+                    description: статус блокировки клиента (true — заблокирован, false — не заблокирован)
+                  reason:
+                    type: string
+                    description: причина блокировки (fraud, incorrect_requisites)
+                  blocked_at:
+                    type: string
+                    format: date-time
+                    description: время, когда была установлена блокировка
+                  blocked_until:
+                    type: string
+                    format: date-time
+                    description: время, до которого клиент заблокирован (если задано)
+        "404":
+          description: клиент не найден
+        "500":
+          description: внутренняя ошибка сервера
